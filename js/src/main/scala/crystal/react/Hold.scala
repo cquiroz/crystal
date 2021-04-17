@@ -12,7 +12,7 @@ import cats.effect.{ Ref, Temporal }
   * the internal timer, i.e: `duration` is guaranteed to have elapsed
   * since last call to `enable` before calling `setter`.
   */
-class Hold[F[_]: ConcurrentEffect: Temporal, A](
+class Hold[F[_]: Temporal, A](
   setter:      A => F[Unit],
   duration:    Option[FiniteDuration],
   cancelToken: Ref[F, Option[CancelToken[F]]],
@@ -45,7 +45,7 @@ class Hold[F[_]: ConcurrentEffect: Temporal, A](
 }
 
 object Hold {
-  def apply[F[_]: ConcurrentEffect: Temporal, A](
+  def apply[F[_]: Temporal, A](
     setter:   A => F[Unit],
     duration: Option[FiniteDuration]
   ): SyncIO[Hold[F, A]] =

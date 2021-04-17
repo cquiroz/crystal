@@ -2,7 +2,6 @@ package crystal
 
 import crystal.react.implicits._
 import cats.effect.Async
-import cats.effect.ConcurrentEffect
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.VdomNode
 import org.typelevel.log4cats.Logger
@@ -24,7 +23,6 @@ package object react {
 
   implicit class StreamOps[F[_], A](private val s: fs2.Stream[F, A]) {
     def render(implicit
-      ce:     ConcurrentEffect[F],
       logger: Logger[F],
       reuse:  Reusability[A]
     ): StreamRenderer.Component[A] =

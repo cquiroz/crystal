@@ -111,7 +111,7 @@ package object implicits {
       */
     def runAsyncCB(
       cb:         Either[Throwable, A] => F[Unit]
-    )(implicit F: Effect[F]): Callback =
+    )(implicit F: Async[F]): Callback =
       CallbackTo.lift(() => self.runAsync(r => cb(r).toIO).unsafeRunSync())
 
     /** Return a `Callback` that will run the effect `F[A]` asynchronously.

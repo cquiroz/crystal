@@ -2,8 +2,6 @@ package crystal
 
 import cats.syntax.all._
 import cats.Id
-import cats.effect.Sync
-import scala.concurrent.Promise
 import cats.effect.Async
 import monocle.Iso
 import monocle.Lens
@@ -11,6 +9,7 @@ import monocle.Optional
 import monocle.Prism
 import monocle.Traversal
 import cats.FlatMap
+import cats.effect.kernel.Deferred
 
 sealed trait ViewOps[F[_], G[_], A] {
   val get: G[A]
@@ -25,7 +24,7 @@ sealed trait ViewOps[F[_], G[_], A] {
 // The difference between a View and a StateSnapshot is that the modifier doesn't act on the current value,
 // but passes the modifier function to an external source of truth. Since we are defining no getter
 // from such source of truth, a View is defined in terms of a modifier function instead of a setter.
-final class ViewF[F[_]: Async: ContextShift, A](val get: A, val mod: (A => A) => F[Unit])
+final class ViewF[F[_]: Async, A](val get: A, val mod: (A => A) => F[Unit])
     extends ViewOps[F, Id, A] {
 
   val set: A => F[Unit] = a => mod(_ => a)
@@ -33,12 +32,12 @@ final class ViewF[F[_]: Async: ContextShift, A](val get: A, val mod: (A => A) =>
   // In a ViewF, we can derive modAndGet. In ViewOptF and ViewListF we have to pass it, since their
   // mod functions have no idea of the enclosing structure.
   val modAndGet: (A => A) => F[A] = f =>
-    Sync[F].delay(Promise[A]()).flatMap { p =>
+    Deferred[F, A].flatMap { p =>
       mod { a: A =>
         val fa = f(a)
-        p.success(fa)
+        p.complete(fa)
         fa
-      } >> Async.fromFuture(Sync[F].delay(p.future))
+      } >> p.get
     }
 
   def zoom[B](getB: A => B)(modB: (B => B) => A => A): ViewF[F, B] =
@@ -96,7 +95,7 @@ final class ViewF[F[_]: Async: ContextShift, A](val get: A, val mod: (A => A) =>
 }
 
 object ViewF {
-  def apply[F[_]: Async: ContextShift, A](value: A, mod: (A => A) => F[Unit]): ViewF[F, A] =
+  def apply[F[_]: Async, A](value: A, mod: (A => A) => F[Unit]): ViewF[F, A] =
     new ViewF(value, mod)
 }
 
